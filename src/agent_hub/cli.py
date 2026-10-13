@@ -247,6 +247,20 @@ def orchestrate(
         pass
 
 
+@app.command()
+def dashboard() -> None:
+    """Serve the human dashboard on 127.0.0.1:DASHBOARD_PORT. Needs AGENT_HUB_TOKEN_HUMAN (a human-role agent)."""
+    import uvicorn
+
+    from agent_hub.dashboard import create_app
+
+    token = os.environ.get("AGENT_HUB_TOKEN_HUMAN", "").strip()
+    if not token:
+        typer.echo("error: AGENT_HUB_TOKEN_HUMAN is not set (create one: agent-hub token create me --kind human --roles human)", err=True)
+        raise typer.Exit(2)
+    uvicorn.run(create_app(token), host="127.0.0.1", port=settings.dashboard_port, log_level="warning")
+
+
 async def _bridge(url: str, token: str) -> None:
     import anyio
     import httpx2
