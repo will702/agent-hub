@@ -1,5 +1,6 @@
 import asyncio
 import os
+import shutil
 import sys
 
 import typer
@@ -187,6 +188,46 @@ def doctor() -> None:
 
     _run(go)
     if not ok_all:
+        raise typer.Exit(1)
+
+
+@app.command("install-clients")
+def install_clients(
+    client: list[str] = typer.Argument(None, help="claude, codex, agy, kiro (default: all found on PATH)"),
+    url: str = typer.Option(None, "--url", help="Hub URL (default http://MCP_HOST:MCP_PORT/mcp)"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print what would change and exit"),
+) -> None:
+    """Register the hub with local AI clients and add the shared instructions snippet."""
+    from agent_hub import installers
+
+    target = url or f"http://{settings.mcp_host}:{settings.mcp_port}/mcp"
+    binaries = {"claude": "claude", "codex": "codex", "agy": "agy", "kiro": "kiro-cli"}
+    clients = client or [c for c, b in binaries.items() if shutil.which(b)]
+    failed = False
+    for c in clients:
+        token = os.environ.get(installers.token_env(c), "").strip() or None
+        try:
+            plan = installers.build(c, target, token)
+        except ValueError as e:
+            typer.echo(f"[{c}] skipped: {e}", err=True)
+            failed = True
+            continue
+        typer.echo(f"[{c}]")
+        for cmd in plan.commands:
+            typer.echo(f"  $ {installers.redact(cmd, token)}")
+        for path, _ in plan.file_edits:
+            typer.echo(f"  edit {path} (backup first, marked block)")
+        for n in plan.notes:
+            typer.echo(f"  note: {n}")
+        if dry_run:
+            continue
+        try:
+            for line in installers.run(plan):
+                typer.echo(f"  {line}")
+        except RuntimeError as e:
+            typer.echo(f"  error: {e}", err=True)
+            failed = True
+    if failed:
         raise typer.Exit(1)
 
 

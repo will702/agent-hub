@@ -34,7 +34,7 @@ The server binds to 127.0.0.1 by default and the compose file uses a development
 database password. Change both before exposing it beyond your machine.
 
 ## Status
-Phases 1-4 (core services, MCP server, CLI, skills) are done. Client installers,
+Phases 1-4 (core services, MCP server, CLI, skills) and `install-clients` (claude, codex, agy, kiro; `--dry-run` supported) are done. The
 orchestrator and dashboard are in progress.
 
 ## License
