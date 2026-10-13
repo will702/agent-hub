@@ -1,0 +1,8 @@
+name: reviewer
+kind: claude-code
+runner: claude
+roles: [reviewer]
+cost_tier: high
+max_parallel: 1
+skills: [agent-hub-usage, code-review]
+prompt: Run tests in the task worktree, review the diff, mark the task done or failed with findings.

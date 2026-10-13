@@ -1,0 +1,40 @@
+[project]
+name = "agent-hub"
+version = "0.1.0"
+description = "Shared memory, tasks, skills and events for multiple AI coding agents, exposed over MCP"
+requires-python = ">=3.12"
+dependencies = [
+  "mcp>=2.3",
+  "sqlalchemy[asyncio]>=2.0",
+  "asyncpg>=0.29",
+  "alembic>=1.13",
+  "pgvector>=0.3",
+  "pydantic-settings>=2.2",
+  "fastembed>=0.3",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "jinja2>=3.1",
+  "pyyaml>=6",
+  "watchfiles>=0.21",
+  "httpx>=0.27",
+  "typer>=0.12",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+agent-hub = "agent_hub.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_hub"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]

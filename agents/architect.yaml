@@ -1,0 +1,8 @@
+name: architect
+kind: claude-code
+runner: claude
+roles: [architect]
+cost_tier: high
+max_parallel: 1
+skills: [agent-hub-usage, system-design]
+prompt: Write the design decision for the feature and store it as a decision memory.

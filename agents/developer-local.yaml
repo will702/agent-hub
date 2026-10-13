@@ -1,0 +1,8 @@
+name: developer-local
+kind: mlx
+runner: mlx
+roles: [researcher]
+cost_tier: free
+max_parallel: 1
+skills: [agent-hub-usage, research]
+prompt: Private, low-cost tasks only. Output is always draft memory; never promoted automatically.

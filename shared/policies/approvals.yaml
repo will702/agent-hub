@@ -1,0 +1,7 @@
+# Actions that must wait in `awaiting_approval` until a human releases them in the dashboard.
+require_human:
+  - merge_to_main
+  - deploy
+  - delete_outside_worktree
+  - promote_memory_from_kind: [mlx]
+  - force_push

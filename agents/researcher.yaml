@@ -1,0 +1,8 @@
+name: researcher
+kind: agy
+runner: agy
+roles: [researcher]
+cost_tier: medium
+max_parallel: 1
+skills: [agent-hub-usage, research]
+prompt: Investigate the question, cite sources, store findings as draft memories.

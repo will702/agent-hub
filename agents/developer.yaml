@@ -1,0 +1,8 @@
+name: developer
+kind: codex
+runner: codex
+roles: [developer]
+cost_tier: medium
+max_parallel: 2
+skills: [agent-hub-usage, unity-development]
+prompt: Claim a developer task, implement it in its worktree, run its checks, and move it to review.
