@@ -51,8 +51,9 @@ def build(client: str, url: str, token: str | None) -> Plan:
     if client == "claude":
         p.commands = [
             ["claude", "mcp", "remove", NAME, "--scope", "user"],
-            ["claude", "mcp", "add", "--transport", "http", "--scope", "user", "--header",
-             f"Authorization: Bearer ${{{env}}}", NAME, url],
+            # --header is variadic, so name and url must come before it
+            ["claude", "mcp", "add", NAME, url, "--transport", "http", "--scope", "user", "--header",
+             f"Authorization: Bearer ${{{env}}}"],
         ]
         p.file_edits = [(home / ".claude" / "CLAUDE.md", SNIPPET)]
         p.notes.append(f"export {env}=<token> in the shell that launches claude")

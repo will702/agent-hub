@@ -29,3 +29,8 @@ def test_agy_requires_token_and_unknown_client():
         installers.build("agy", "http://x/mcp", None)
     with pytest.raises(ValueError):
         installers.build("nope", "http://x/mcp", None)
+
+
+def test_claude_name_and_url_precede_variadic_header():
+    cmd = installers.build("claude", "http://x/mcp", None).commands[1]
+    assert cmd.index("agent-hub") < cmd.index("--header") and cmd.index("http://x/mcp") < cmd.index("--header")
