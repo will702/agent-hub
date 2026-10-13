@@ -202,3 +202,13 @@ def test_skill_read_rejects_traversal():
     with pytest.raises(LookupError):
         skills.read("does-not-exist")
     assert skills.read("agent-hub-usage").startswith("---")
+
+
+async def test_event_publish_rules_and_role_escalation(server_url, tokens):
+    async with client(server_url, tokens["dev"]) as c:
+        ok = await call(c, "event_publish", type="note.custom", project=tokens["a"])
+        assert not ok.is_error
+        for forged in ("task.done", "memory.promoted", "system.anything"):
+            assert (await call(c, "event_publish", type=forged, project=tokens["a"])).is_error
+        # a developer cannot claim reviewer-only work by naming the role
+        assert (await call(c, "task_claim", project=tokens["a"], role="reviewer")).is_error

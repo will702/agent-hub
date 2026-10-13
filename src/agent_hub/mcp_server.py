@@ -290,6 +290,9 @@ async def task_update(task_id: str, status: str, result: str | None = None, bran
         return t
 
 
+RESERVED_EVENT_PREFIXES = {"task", "memory", "system"}
+
+
 @mcp.tool()
 @guarded
 async def event_publish(
@@ -299,20 +302,24 @@ async def event_publish(
     """Publish an event to the project event log."""
     agent = _agent()
     async with Session() as s:
+        if type.split(".", 1)[0] in RESERVED_EVENT_PREFIXES and not ({"human", "admin"} & set(agent.roles or [])):
+            raise PermissionError(f"event types starting with {sorted(RESERVED_EVENT_PREFIXES)} are reserved for the hub")
         project_id = None
         if project or cwd:
             p = await auth.resolve_project(s, project, cwd)
             await auth.require_access(s, agent, p.id, "write")
             project_id = p.id
-        elif task_id:
+        if task_id:
             row = (
                 await s.execute(text("SELECT project_id FROM tasks WHERE id = :i"), {"i": uuid.UUID(task_id)})
             ).first()
             if row is None:
                 raise LookupError(f"task {task_id} not found")
+            if project_id is not None and row[0] != project_id:
+                raise ValueError("task does not belong to that project")
             await auth.require_access(s, agent, row[0], "write")
             project_id = row[0]
-        elif not ({"human", "admin"} & set(agent.roles or [])):
+        if project_id is None and not ({"human", "admin"} & set(agent.roles or [])):
             raise ValueError("project (or cwd/task_id) is required")
         ev = await events.publish(
             s, type=type, project_id=project_id, task_id=uuid.UUID(task_id) if task_id else None,

@@ -224,3 +224,44 @@ async def test_supersede_verified_requires_reviewer(env):
     async with Session() as s:
         with pytest.raises(PermissionError):
             await memory.supersede(s, env.dev, m.id, "use pg17")
+
+
+async def test_dep_completing_between_status_read_and_insert_still_promotes_child(env):
+    parent = await mk(env, "parent")
+    async with Session() as s:
+        await tasks.claim(s, env.dev, env.project.id)
+        await s.commit()
+
+    async def finish():
+        async with Session() as s:
+            await tasks.update(s, env.dev, parent["id"], "done")
+            await s.commit()
+
+    creator = Session()
+    orig, started = creator.execute, {}
+
+    async def hooked(stmt, *a, **k):
+        # Runs after create() has read the dependency's status and before it inserts the child.
+        if "INSERT INTO tasks" in str(stmt) and not started:
+            started["t"] = asyncio.create_task(finish())
+            await asyncio.sleep(0.5)  # with the share lock, finish() is blocked here; without it, it commits
+        return await orig(stmt, *a, **k)
+
+    creator.execute = hooked
+    child = await tasks.create(creator, env.dev, env.project.id, "child", depends_on=[parent["id"]])
+    assert child["status"] == "pending"
+    await creator.commit()
+    await creator.close()
+    await asyncio.wait_for(started["t"], 5)
+    assert await status_of(child["id"]) == "ready"
+
+
+async def test_cannot_promote_own_memory(env):
+    async with Session() as s:
+        m = await memory.write(s, env.rev, env.project.id, "reviewer wrote this")
+        await s.commit()
+    async with Session() as s:
+        with pytest.raises(PermissionError):
+            await memory.promote(s, env.rev, m.id)
+    async with Session() as s:
+        await memory.promote(s, env.human, m.id)

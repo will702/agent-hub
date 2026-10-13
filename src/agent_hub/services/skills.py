@@ -34,7 +34,7 @@ def scan() -> list[dict]:
         meta, _ = parse_skill(f.read_text(encoding="utf-8"))
         out.append(
             {
-                "name": str(meta.get("name") or f.parent.name),
+                "name": f.parent.name,  # skill_read resolves by directory, so the index must too
                 "description": str(meta.get("description") or ""),
                 "path": str(f),
             }

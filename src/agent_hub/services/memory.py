@@ -95,6 +95,8 @@ async def promote(s: AsyncSession, agent: Agent, memory_id) -> Memory:
         raise PermissionError("promote requires reviewer, human or admin role")
     m = await _get(s, memory_id)
     await auth.require_access(s, agent, m.project_id, "write")
+    if m.source_agent == agent.name and not ({"human", "admin"} & set(agent.roles or [])):
+        raise PermissionError("an agent cannot promote its own memory; ask another reviewer or a human")
     if m.status == "superseded":
         raise ValueError("cannot promote a superseded memory")
     m.status = "verified"

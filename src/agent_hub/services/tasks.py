@@ -51,7 +51,7 @@ async def create(
     if deps:
         rows = (
             await s.execute(
-                text("SELECT id, project_id, status FROM tasks WHERE id = ANY(:ids)"), {"ids": deps}
+                text("SELECT id, project_id, status FROM tasks WHERE id = ANY(:ids) ORDER BY id FOR SHARE"), {"ids": deps}
             )
         ).all()
         found = {r.id: r for r in rows}
