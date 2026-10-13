@@ -3,11 +3,13 @@
 Runs as a `human` agent (token from AGENT_HUB_TOKEN_HUMAN), binds to localhost, and protects
 state-changing POSTs with a per-process CSRF token plus a Host check.
 """
+import asyncio
+import json
 import secrets
 import uuid
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from jinja2 import DictLoader, Environment, select_autoescape
 from sqlalchemy import text
 
@@ -46,13 +48,52 @@ button{cursor:pointer}pre{white-space:pre-wrap;margin:4px 0}
 {% else %}<p class="mut">No drafts.</p>{% endfor %}{% endblock %}""",
     "events.html": """{% extends "base.html" %}{% block body %}<h1>Events</h1>
 <form method="get"><input name="type" placeholder="type prefix" value="{{ q }}"> <button>Filter</button></form>
-<table><tr><th>id</th><th>time</th><th>type</th><th>agent</th><th>payload</th></tr>
-{% for e in rows %}<tr><td>{{ e.id }}</td><td>{{ e.ts.strftime('%m-%d %H:%M:%S') }}</td><td>{{ e.type }}</td><td>{{ e.agent_name }}</td><td class="mut">{{ e.payload }}</td></tr>{% endfor %}</table>{% endblock %}""",
+<p class="mut" id="live">live: connecting…</p>
+<table><thead><tr><th>id</th><th>time</th><th>type</th><th>agent</th><th>payload</th></tr></thead><tbody id="rows">
+{% for e in rows %}<tr><td>{{ e.id }}</td><td>{{ e.ts.strftime('%m-%d %H:%M:%S') }}</td><td>{{ e.type }}</td><td>{{ e.agent_name }}</td><td class="mut">{{ e.payload }}</td></tr>{% endfor %}</tbody></table>
+<script>
+(function(){
+  var rows=document.getElementById('rows'), live=document.getElementById('live');
+  var after={{ rows[0].id if rows else 0 }}, prefix={{ q|tojson }};
+  var es=new EventSource('/events/stream?after='+after+'&type='+encodeURIComponent(prefix));
+  es.onopen=function(){live.textContent='live';};
+  es.onerror=function(){live.textContent='live: reconnecting…';};
+  es.onmessage=function(m){
+    var e=JSON.parse(m.data), tr=document.createElement('tr');
+    [e.id,e.ts,e.type,e.agent_name||'',JSON.stringify(e.payload)].forEach(function(v,i){
+      var td=document.createElement('td'); td.textContent=v; if(i==4) td.className='mut'; tr.appendChild(td);});
+    rows.insertBefore(tr, rows.firstChild);
+    while(rows.children.length>200) rows.removeChild(rows.lastChild);
+  };
+})();
+</script>{% endblock %}""",
     "agents.html": """{% extends "base.html" %}{% block body %}<h1>Agents</h1>
 <table><tr><th>name</th><th>kind</th><th>roles</th><th>projects</th></tr>
 {% for a in rows %}<tr><td>{{ a.name }}</td><td>{{ a.kind }}</td><td>{{ a.roles|join(', ') }}</td><td>{{ a.projects }}</td></tr>{% endfor %}</table>{% endblock %}""",
 }
 _env = Environment(loader=DictLoader(TEMPLATES), autoescape=select_autoescape(default=True, default_for_string=True))
+
+
+async def event_stream(prefix: str, after: int, interval: float = 1.0, max_ticks: int | None = None, is_gone=None):
+    """Yield SSE frames for events newer than `after`. Polls the table; a comment keeps idle links open."""
+    like = prefix.replace("\\", "").replace("%", "").replace("_", r"\_") + "%"
+    ticks = idle = 0
+    while max_ticks is None or ticks < max_ticks:
+        if is_gone is not None and await is_gone():
+            return
+        async with Session() as s:
+            rows = (await s.execute(text("""SELECT id, ts, type, agent_name, payload FROM events
+                WHERE id > :a AND type LIKE :q ORDER BY id LIMIT 100"""), {"a": after, "q": like})).mappings().all()
+        for r in rows:
+            after = r["id"]
+            data = {"id": r["id"], "ts": r["ts"].strftime("%m-%d %H:%M:%S"), "type": r["type"],
+                    "agent_name": r["agent_name"], "payload": r["payload"]}
+            yield f"data: {json.dumps(data, default=str)}\n\n"
+        idle = 0 if rows else idle + 1
+        if idle and idle % 15 == 0:
+            yield ": keepalive\n\n"
+        ticks += 1
+        await asyncio.sleep(interval)
 
 
 def create_app(token: str, allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost")) -> FastAPI:
@@ -135,6 +176,13 @@ def create_app(token: str, allowed_hosts: tuple[str, ...] = ("127.0.0.1", "local
             rows = (await s.execute(text("""SELECT id, ts, type, agent_name, payload FROM events
                 WHERE type LIKE :q ORDER BY id DESC LIMIT 200"""), {"q": type.replace("%", "").replace("_", r"\_") + "%"})).mappings().all()
         return await page("events.html", rows=rows, q=type)
+
+    @app.get("/events/stream")
+    async def events_stream(request: Request, after: int = 0, type: str = "", _: Agent = Depends(human)):
+        return StreamingResponse(
+            event_stream(type, after, is_gone=request.is_disconnected), media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     @app.get("/agents", response_class=HTMLResponse)
     async def agents_page(_: Agent = Depends(human)):

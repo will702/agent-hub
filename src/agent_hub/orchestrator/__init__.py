@@ -20,6 +20,9 @@ from agent_hub.config import settings
 DEFAULT_COMMANDS = {
     "claude": ["claude", "-p", "{prompt}"],
     "codex": ["codex", "exec", "{prompt}"],
+    # agy keeps its token in its own config (set by install-clients), so a worker using this
+    # runner acts as that configured agent; AGENT_HUB_TOKEN_AGY injection has no effect.
+    "agy": ["agy", "-p", "{prompt}"],
     "mlx": [sys.executable, "-m", "agent_hub.cli", "mlx-run", "--agent", "{name}", "--project", "{project}", "--role", "{role}"],
 }
 

@@ -61,3 +61,24 @@ async def test_bad_host_and_non_human_token(env):
         assert (await c.get("/")).status_code == 403
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://127.0.0.1") as c:
         assert (await c.get("/")).status_code == 500
+
+
+async def test_event_stream_yields_only_new_matching_events(env):
+    from agent_hub.dashboard import event_stream
+    from agent_hub.services import events
+
+    async with Session() as s:
+        first = await events.publish(s, type="zz.old", project_id=env.project.id)
+        await s.commit()
+    async with Session() as s:
+        await events.publish(s, type="zz.new", project_id=env.project.id, payload={"k": "<b>"})
+        await events.publish(s, type="other.skip", project_id=env.project.id)
+        await s.commit()
+    frames = [f async for f in event_stream("zz.", first.id, interval=0.01, max_ticks=2)]
+    assert len(frames) == 1 and frames[0].startswith("data: ") and "zz.new" in frames[0]
+    assert "zz.old" not in frames[0] and "other.skip" not in frames[0]
+
+
+async def test_stream_route_and_page_wiring(env, dash):
+    page = (await dash.get("/events")).text
+    assert "EventSource('/events/stream" in page and "textContent" in page

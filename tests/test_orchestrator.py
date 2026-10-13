@@ -28,7 +28,7 @@ def test_build_command_and_unknown_runner():
     import pytest
 
     with pytest.raises(ValueError):
-        build_command(Spawn(spec("x", ["developer"], runner="agy"), "developer", "p"))
+        build_command(Spawn(spec("x", ["developer"], runner="custom"), "developer", "p"))
 
 
 def test_worker_env_swaps_token(monkeypatch):
@@ -42,3 +42,8 @@ def test_worker_env_swaps_token(monkeypatch):
 
 def test_load_specs_reads_repo_agents():
     assert {s.name for s in load_specs()} >= {"developer", "reviewer", "manager"}
+
+
+def test_agy_has_default_print_mode_command():
+    cmd = build_command(Spawn(spec("res", ["researcher"], runner="agy"), "researcher", "p"))
+    assert cmd[:2] == ["agy", "-p"] and "task_claim(project='p'" in cmd[2]
