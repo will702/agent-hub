@@ -261,6 +261,32 @@ def dashboard() -> None:
     uvicorn.run(create_app(token), host="127.0.0.1", port=settings.dashboard_port, log_level="warning")
 
 
+@app.command("install-launchd")
+def install_launchd(
+    install: bool = typer.Option(False, "--install", help="Write the plists and load them (default: print only)"),
+    uninstall: bool = typer.Option(False, "--uninstall", help="Unload and remove the plists"),
+    live: bool = typer.Option(False, "--live", help="Run the orchestrator with --live (spawns paid agents)"),
+) -> None:
+    """Run the server, dashboard and orchestrator as launchd agents (tokens sourced from ~/.agent-hub/tokens.env)."""
+    import plistlib
+
+    from agent_hub import launchd
+
+    uid = os.getuid()
+    if uninstall:
+        for line in launchd.uninstall(uid) or ["nothing installed"]:
+            typer.echo(line)
+        return
+    if not install:
+        for name, args in launchd.services(live).items():
+            typer.echo(f"--- {launchd.PREFIX}.{name}.plist")
+            typer.echo(plistlib.dumps(launchd.render(name, args)).decode())
+        typer.echo("dry run: pass --install to write and load these")
+        return
+    for line in launchd.install(live, uid):
+        typer.echo(line)
+
+
 async def _bridge(url: str, token: str) -> None:
     import anyio
     import httpx2
