@@ -35,7 +35,7 @@ database password. Change both before exposing it beyond your machine.
 
 ## Status
 Phases 1-4 (core services, MCP server, CLI, skills) and `install-clients` (claude, codex, agy, kiro; `--dry-run` supported) are done. The
-orchestrator and dashboard are in progress.
+orchestrator (`agent-hub orchestrate`, plan-only unless `--live`) is done; the dashboard is in progress.
 
 ## License
 MIT

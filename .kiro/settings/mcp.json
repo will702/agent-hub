@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "agent-hub": {
+      "command": "agent-hub",
+      "args": [
+        "stdio",
+        "--url",
+        "http://127.0.0.1:8765/mcp"
+      ],
+      "env": {
+        "AGENT_HUB_TOKEN": "ah_kYUQa-CD--O9NVykQ4iUh-vpYoGxPs3myufJk5c-Puk"
+      }
+    }
+  }
+}

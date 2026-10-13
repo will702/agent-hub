@@ -231,6 +231,22 @@ def install_clients(
         raise typer.Exit(1)
 
 
+@app.command()
+def orchestrate(
+    live: bool = typer.Option(False, "--live", help="Actually spawn runners (default: only print the plan)"),
+    once: bool = typer.Option(False, "--once", help="Run a single pass and exit"),
+    interval: int = typer.Option(15, "--interval", help="Seconds between passes"),
+    timeout: int = typer.Option(3600, "--timeout", help="Kill a runner after this many seconds"),
+) -> None:
+    """Reap expired leases and dispatch runners for ready tasks. Needs AGENT_HUB_TOKEN_<AGENT> per agents/*.yaml."""
+    from agent_hub import orchestrator
+
+    try:
+        _run(lambda: orchestrator.run(live, interval, timeout, once, echo=typer.echo))
+    except KeyboardInterrupt:
+        pass
+
+
 async def _bridge(url: str, token: str) -> None:
     import anyio
     import httpx2

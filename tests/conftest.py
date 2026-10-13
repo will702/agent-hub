@@ -1,4 +1,37 @@
+import asyncio
+import os
+import re
 import uuid
+
+# Tests run against their own database so they never pollute the real hub. This must happen
+# before agent_hub is imported, because the engine is created at import time.
+_base = os.environ.get("DATABASE_URL") or re.search(
+    r"^DATABASE_URL=(.+)$", open(os.path.join(os.path.dirname(__file__), "..", ".env")).read(), re.M
+).group(1).strip()
+_TEST_DB = "agenthub_test"
+os.environ["DATABASE_URL"] = re.sub(r"/[^/]+$", f"/{_TEST_DB}", _base)
+
+
+def _bootstrap_test_db() -> None:
+    import asyncpg
+    from alembic import command
+
+    from agent_hub.cli import _alembic_cfg
+
+    async def create() -> None:
+        dsn = re.sub(r"^postgresql\+asyncpg", "postgresql", re.sub(r"/[^/]+$", "/postgres", _base))
+        conn = await asyncpg.connect(dsn)
+        try:
+            if not await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = $1", _TEST_DB):
+                await conn.execute(f'CREATE DATABASE "{_TEST_DB}"')
+        finally:
+            await conn.close()
+
+    asyncio.run(create())
+    command.upgrade(_alembic_cfg(), "head")
+
+
+_bootstrap_test_db()
 
 import pytest
 import pytest_asyncio
