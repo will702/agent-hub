@@ -46,7 +46,7 @@ async def test_approve_requires_csrf_and_works(env, dash):
 
 async def test_promote_memory(env, dash):
     async with Session() as s:
-        m = await memory.write(s, env.dev, env.project.id, "fact", "dashboard promote me")
+        m = await memory.write(s, env.dev, env.project.id, "dashboard promote me", "fact")
         await s.commit()
     r = await dash.post(f"/memory/{m.id}/promote", data={"csrf": dash.csrf})
     assert r.status_code == 303

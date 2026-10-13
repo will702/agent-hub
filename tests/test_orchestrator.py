@@ -28,7 +28,7 @@ def test_build_command_and_unknown_runner():
     import pytest
 
     with pytest.raises(ValueError):
-        build_command(Spawn(spec("x", ["developer"], runner="mlx"), "developer", "p"))
+        build_command(Spawn(spec("x", ["developer"], runner="agy"), "developer", "p"))
 
 
 def test_worker_env_swaps_token(monkeypatch):

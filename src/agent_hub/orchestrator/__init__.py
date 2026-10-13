@@ -7,6 +7,7 @@ token, which is injected through the env var the installed client already reads
 import asyncio
 import os
 import shutil
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,6 +20,7 @@ from agent_hub.config import settings
 DEFAULT_COMMANDS = {
     "claude": ["claude", "-p", "{prompt}"],
     "codex": ["codex", "exec", "{prompt}"],
+    "mlx": [sys.executable, "-m", "agent_hub.cli", "mlx-run", "--agent", "{name}", "--project", "{project}", "--role", "{role}"],
 }
 
 
@@ -82,7 +84,13 @@ def build_command(sp: Spawn) -> list[str]:
         f"role='{sp.role}', worktree=true) to take exactly one task, do it, send task_heartbeat on long "
         "work, and finish with task_update and a concrete result."
     ).strip()
-    return [a.replace("{prompt}", prompt) for a in tmpl]
+    subs = {"{prompt}": prompt, "{name}": sp.spec.name, "{project}": sp.project_slug, "{role}": sp.role}
+    out = []
+    for a in tmpl:
+        for k, v in subs.items():
+            a = a.replace(k, v)
+        out.append(a)
+    return out
 
 
 def worker_env(spec: AgentSpec) -> dict[str, str] | None:

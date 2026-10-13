@@ -218,7 +218,7 @@ async def test_failed_task_cannot_be_revived_by_claimer(env):
 
 async def test_supersede_verified_requires_reviewer(env):
     async with Session() as s:
-        m = await memory.write(s, env.dev, env.project.id, "fact", "use pg16")
+        m = await memory.write(s, env.dev, env.project.id, "use pg16", "fact")
         await memory.promote(s, env.rev, m.id)
         await s.commit()
     async with Session() as s:

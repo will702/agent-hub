@@ -287,6 +287,24 @@ def install_launchd(
         typer.echo(line)
 
 
+@app.command("mlx-run", hidden=True)
+def mlx_run(
+    agent: str = typer.Option(..., "--agent", help="Worker name (agents/<name>.yaml supplies the prompt)"),
+    project: str = typer.Option(..., "--project"),
+    role: str = typer.Option(..., "--role"),
+) -> None:
+    """Claim one task and work it with a local OpenAI-compatible model (MLX_BASE_URL, MLX_MODEL)."""
+    import yaml
+
+    from agent_hub.runners import mlx
+
+    spec_file = settings.agents_dir / f"{agent}.yaml"
+    prompt = ""
+    if spec_file.is_file():
+        prompt = (yaml.safe_load(spec_file.read_text(encoding="utf-8")) or {}).get("prompt", "").strip()
+    raise typer.Exit(_run(lambda: mlx.main(agent, project, role, prompt)))
+
+
 async def _bridge(url: str, token: str) -> None:
     import anyio
     import httpx2

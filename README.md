@@ -35,7 +35,7 @@ database password. Change both before exposing it beyond your machine.
 
 ## Status
 Phases 1-4 (core services, MCP server, CLI, skills) and `install-clients` (claude, codex, agy, kiro; `--dry-run` supported) are done. The
-orchestrator (`agent-hub orchestrate`, plan-only unless `--live`) and the dashboard (`agent-hub dashboard`, localhost only) are done.
+orchestrator (`agent-hub orchestrate`, with an MLX runner for local OpenAI-compatible models, plan-only unless `--live`) and the dashboard (`agent-hub dashboard`, localhost only) are done.
 
 ## License
 MIT
