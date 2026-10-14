@@ -44,6 +44,12 @@ def merge_snippet(existing: str, snippet: str = SNIPPET) -> str:
     return existing + sep + snippet
 
 
+def binary() -> str:
+    from agent_hub.launchd import binary as b
+
+    return b()
+
+
 def build(client: str, url: str, token: str | None) -> Plan:
     env = token_env(client)
     home = Path.home()
@@ -75,12 +81,12 @@ def build(client: str, url: str, token: str | None) -> Plan:
     elif client == "kiro":
         # kiro-cli cannot set HTTP headers, so go through the stdio shim.
         p.commands = [
-            ["kiro-cli", "mcp", "remove", "--name", NAME],
-            ["kiro-cli", "mcp", "add", "--name", NAME, "--command", "agent-hub", "--args", "stdio",
+            ["kiro-cli", "mcp", "remove", "--scope", "global", "--name", NAME],
+            ["kiro-cli", "mcp", "add", "--scope", "global", "--name", NAME, "--command", binary(), "--args", "stdio",
              "--args", "--url", "--args", url, "--env", f"AGENT_HUB_TOKEN={token or '<set-me>'}"],
         ]
         p.file_edits = [(home / ".kiro" / "steering" / "agent-hub.md", SNIPPET)]
-        p.notes.append("kiro uses the stdio shim; `agent-hub` must be on PATH (e.g. `uv tool install .`)")
+        p.notes.append("kiro uses the stdio shim via the absolute path of this checkout's agent-hub binary")
     else:
         raise ValueError(f"unknown client {client!r}")
     return p
